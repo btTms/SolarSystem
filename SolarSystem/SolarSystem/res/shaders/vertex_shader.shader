@@ -3,13 +3,12 @@
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoords;
+layout(location = 4) in mat4 planetInstanceMatrix;
 
-uniform mat4 mvp;
-
-out vec2 TexCoord;
+uniform mat4 projection;
+uniform mat4 view;
 
 void main() {
 
-	gl_Position = mvp * vec4(aPos, 1.0f);
-	TexCoord = aTexCoords;
+	gl_Position = projection * view * planetInstanceMatrix * vec4(aPos, 1.0f);
 }

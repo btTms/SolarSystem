@@ -19,7 +19,7 @@ class Sphere{
 
 public:
 
-	Sphere(float radius, int sectorCount, int stackCount);
+	Sphere(float radius, int sectorCount, int stackCount, int incerement, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data);
 
 	// for debugging:
 	void printInfo();
@@ -29,7 +29,7 @@ public:
 	int getSectorCount() const { return sectorCount; }
 	int getStackCount() const { return stackCount; }
 
-	void setProperties(float radius, int sectorCount, int stackCount);
+	void setProperties(float radius, int sectorCount, int stackCount, int incerement, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data);
 	void setRadius(float radius);
 	void setSectorCount(int sectorCount);
 	void setStackCount(int stackCount);
@@ -39,7 +39,6 @@ public:
 	unsigned int getNormalCount() const { return (unsigned int)normals.size() / 3; }
 	unsigned int getTexCoordCount() const { return (unsigned int)texCoords.size() / 2; }
 	unsigned int getIndexCount() const { return (unsigned int)indices.size(); }
-	unsigned int getLineIndexCount() const { return (unsigned int)lineIndices.size(); }
 	unsigned int getTriangleCount() const { return getIndexCount() / 3; }
 
 	// sizes for strides and memory
@@ -47,7 +46,6 @@ public:
 	unsigned int getNormalSize() const { return (unsigned int)normals.size() * sizeof(float); }
 	unsigned int getTexCoordSize() const { return (unsigned int)texCoords.size() * sizeof(float); }
 	unsigned int getIndexSize() const { return (unsigned int)indices.size() * sizeof(unsigned int); }
-	unsigned int getLineIndexSize() const { return (unsigned int)lineIndices.size() * sizeof(unsigned int); }
 
 
 	// geters for the final verticies with all the 
@@ -61,7 +59,6 @@ public:
 	const float* getNormals() const { return normals.data(); }
 	const float* getTexCoords() const { return texCoords.data(); }
 	const unsigned int* getIndices() const { return indices.data(); }
-	const unsigned int* getLineIndices() const { return lineIndices.data(); }
 
 	// textures:
 
@@ -74,7 +71,6 @@ private:
 
 	std::vector<float> vertices;
 	std::vector<unsigned int> indices;
-	std::vector<unsigned int> lineIndices;
 	std::vector<float> normals;
 	std::vector<float> texCoords;
 
@@ -83,8 +79,8 @@ private:
 	int interleavedStride;
 	
 	// builds:
-	void buildVerticesSmooth();
-	void buildInterleavedVertices();
+	void buildVerticesSmooth(int increment, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data);
+	void buildInterleavedVertices(std::vector<float>& final_vertex_buffer_data);
 
 	// clear
 	void clearArrays();

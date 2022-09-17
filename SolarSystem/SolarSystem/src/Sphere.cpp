@@ -8,8 +8,8 @@ const int MIN_SECTOR_COUNT = 3;
 const int MIN_STACK_COUNT = 2;
 const float MIN_SPHERE_RADIUS = 4;
 
-Sphere::Sphere(float radius, int sectorCount, int stackCount){
-	setProperties(radius, sectorCount, stackCount);
+Sphere::Sphere(float radius, int sectorCount, int stackCount, int increment, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data){
+	setProperties(radius, sectorCount, stackCount, increment, final_indices, final_vertex_buffer_data);
 	this->interleavedStride = 32;
 }
 
@@ -59,7 +59,7 @@ void Sphere::setStackCount(int stackCount){
 // builders:
 
 
-void Sphere::buildInterleavedVertices(){
+void Sphere::buildInterleavedVertices(std::vector<float>& final_vertex_buffer_data){
 
 	std::vector<float>().swap(interleavedVertices);
 
@@ -83,10 +83,12 @@ void Sphere::buildInterleavedVertices(){
 		this->interleavedVertices.push_back(texCoords[j + 1]);
 	}
 
+	final_vertex_buffer_data.insert(final_vertex_buffer_data.end(), interleavedVertices.begin(), interleavedVertices.end());
+
 
 }
 
-void Sphere::buildVerticesSmooth() {
+void Sphere::buildVerticesSmooth(int increment, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data) {
 
 	const float PI = acos(-1);
 
@@ -152,33 +154,32 @@ void Sphere::buildVerticesSmooth() {
 				this->indices.push_back(k1);
 				this->indices.push_back(k2);
 				this->indices.push_back(k1 + 1);
+
+				final_indices.push_back(k1 + (increment * 703));
+				final_indices.push_back(k2 + (increment * 703));
+				final_indices.push_back(k1 + 1 + (increment * 703));
 			}
 
 			if (i != (stackCount - 1)) {
 				this->indices.push_back(k1 + 1);
 				this->indices.push_back(k2);
 				this->indices.push_back(k2 + 1);
-			}
 
-			// vertical lines for all stacks:
-			lineIndices.push_back(k1);
-			lineIndices.push_back(k2);
-
-			if (i != 0) { // horizontal lines except 1st stack
-				lineIndices.push_back(k1);
-				lineIndices.push_back(k1 + 1);
+				final_indices.push_back(k1 + 1 + (increment * 703));
+				final_indices.push_back(k2 + (increment * 703));
+				final_indices.push_back(k2 + 1 + (increment * 703));
 			}
 
 		}
 	}
 
 	// generate interleaved vertex array;
-	buildInterleavedVertices();
+	buildInterleavedVertices(final_vertex_buffer_data);
 
 }
 
 
-void Sphere::setProperties(float radius, int sectorCount, int stackCount) {
+void Sphere::setProperties(float radius, int sectorCount, int stackCount, int incerement, std::vector<unsigned int>& final_indices, std::vector<float>& final_vertex_buffer_data) {
 	this->radius = abs(radius);
 
 	this->sectorCount = sectorCount;
@@ -193,7 +194,7 @@ void Sphere::setProperties(float radius, int sectorCount, int stackCount) {
 		this->stackCount = MIN_STACK_COUNT;
 	}
 
-	buildVerticesSmooth();
+	buildVerticesSmooth(incerement, final_indices, final_vertex_buffer_data);
 }
 
 void Sphere::clearArrays(){
@@ -202,7 +203,6 @@ void Sphere::clearArrays(){
 	std::vector<float>().swap(normals);
 	std::vector<float>().swap(texCoords);
 	std::vector<unsigned int>().swap(indices);
-	std::vector<unsigned int>().swap(lineIndices);
 }
 
 glm::vec3 Sphere::computeFaceNormal(float x1, float y1, float z1,  // v1

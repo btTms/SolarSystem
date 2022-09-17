@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <vector>
 
 #include "Sphere.h"
 #include "Shader.h"
@@ -29,7 +30,19 @@ bool firstMouse = true;
 bool previousState = false;
 bool mouseIsVisible = false;
 
-Sphere* sphere1 = new Sphere(1.0f, 44, 30);
+std::vector<float> vertices;
+std::vector<unsigned int> indices;
+
+
+Sphere sphere1((float)69.6340, 36, 18, 0, indices, vertices); // SUN
+Sphere sphere2((float)0.24397, 36, 18, 1, indices, vertices); // MERCURY
+Sphere sphere3((float)0.60518, 36, 18, 2, indices, vertices); // VENUS
+Sphere sphere4((float)0.6371,  36, 18, 3, indices, vertices);  // EARTH
+Sphere sphere5((float)0.33895, 36, 18, 4, indices, vertices); // MARS
+Sphere sphere6((float)6.9911,  36, 18, 5, indices, vertices);  // JUPITER
+Sphere sphere7((float)5.8232,  36, 18, 6, indices, vertices);  // SATURN
+Sphere sphere8((float)2.5362,  36, 18, 7, indices, vertices);  // URANUS
+Sphere sphere9((float)2.4622,  36, 18, 8, indices, vertices);  // NEPTUNE
 
 void processInput(GLFWwindow* window);
 
@@ -78,6 +91,8 @@ int main(void){
     // configure global opengl state
     glEnable(GL_DEPTH_TEST);
 
+    //unsigned int earth_texture = sphere1->loadTexture("res/textures/sun.jpg", true);
+
     // ------- IMGUI -------
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -87,23 +102,24 @@ int main(void){
     ImGui_ImplOpenGL3_Init("#version 330");
 
 
-
     Shader shader("res/shaders/vertex_shader.shader", "res/shaders/fragment_shader.shader");
 
-    unsigned int sphereVAO;
-    glGenVertexArrays(1, &sphereVAO);
 
-    unsigned int sphereVBO;
-    glGenBuffers(1, &sphereVBO);
+    int stride = 32;
 
-    glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
-    glBufferData(GL_ARRAY_BUFFER, sphere1->getInterleavedVertexSize(), sphere1->getInterleavedVertices(), GL_STATIC_DRAW);
+    unsigned int planetsVAO;
+    glGenVertexArrays(1, &planetsVAO);
 
-    glBindVertexArray(sphereVAO);
+    // Vertex buffer of the planets:
+    unsigned int planetsVBO;
+    glGenBuffers(1, &planetsVBO);
 
-    int stride = sphere1->getInterleavedStride();
+    glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
+    glBufferData(GL_ARRAY_BUFFER, (unsigned int)vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    // position attribute:
+    glBindVertexArray(planetsVAO);
+
+    // position attributes:
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
 
@@ -111,15 +127,63 @@ int main(void){
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // texture coordinates:
+    // texture coords
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    unsigned int sphereEBO; // EBO for the sphere itself
-    glGenBuffers(1, &sphereEBO);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere1->getIndexSize(), sphere1->getIndices(), GL_STATIC_DRAW);
+    // Index buffer of the planets:
+    unsigned int planetsEBO;
+    glGenBuffers(1, &planetsEBO);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetsEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (unsigned int)indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+
+    // translate every planet to its right starting coordinate (basically their distance from the Sun)
+    glm::mat4* planetsModelMatrices;
+    planetsModelMatrices = new glm::mat4[9];
+
+    planetsModelMatrices[0] = glm::translate(glm::mat4(1.0f), glm::vec3(3.5f, 0.0f, 0.0f));
+    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(6.7f, 0.0f, 0.0f));
+    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(9.3f, 0.0f, 0.0f));
+    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(14.2f, 0.0f, 0.0f));
+    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(29.7, 0.0f, 0.0f));
+    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(48.4f, 0.0f, 0.0f));
+    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(88.9f, 0.0f, 0.0f));
+    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(179.0f, 0.0f, 0.0f));
+    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(288.0f, 0.0f, 0.0f));
+
+    unsigned int planetsModelMatrixBuffer;
+    glGenBuffers(1, &planetsModelMatrixBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
+    glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
+
+    for (unsigned int i = 0; i < 9; i++) {
+
+        glBindVertexArray(planetsVAO);
+
+        std::size_t vec4Size = sizeof(glm::vec4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)0);
+        glEnableVertexAttribArray(4);
+
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(1 * vec4Size));
+        glEnableVertexAttribArray(5);
+
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size));
+        glEnableVertexAttribArray(6);
+
+        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size));
+        glEnableVertexAttribArray(7);
+
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+        glVertexAttribDivisor(7, 1);
+
+        glBindVertexArray(0);
+
+    }
 
 
     bool show_demo_window = true;
@@ -132,7 +196,6 @@ int main(void){
     float z_rot = 0.0f;
     float speed = 50.0f;
 
-    unsigned int earth_texture = sphere1->loadTexture("res/textures/earth_daymap.jpg", true);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -155,32 +218,23 @@ int main(void){
 
         shader.use();
 
-        unsigned int color_loc = glGetUniformLocation(shader.ID, "color");
-        glUniform3fv(color_loc, 1, glm::value_ptr(color));
-
-        // view /& projection transformations:
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
 
-        // world transfgormation:
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 10000.0f);
 
-        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(speed), glm::vec3(x_rot, y_rot, z_rot));
+        unsigned int view_loc = glGetUniformLocation(shader.ID, "view");
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
 
-        glm::mat4 mvp = projection * view * model;
+        unsigned int proj_loc = glGetUniformLocation(shader.ID, "projection");
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        unsigned int mvp_loc = glGetUniformLocation(shader.ID, "mvp");
-        glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm::value_ptr(mvp));
 
-        glBindTexture(GL_TEXTURE_2D, earth_texture);
+        glBindVertexArray(planetsVAO);
 
-        glBindVertexArray(sphereVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetsEBO);
 
-        glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
-
-        if(show_sphere)
-            glDrawElements(GL_TRIANGLES, sphere1->getIndexCount(), GL_UNSIGNED_INT, 0);
+        glDrawElementsInstanced(GL_TRIANGLES, unsigned int(indices.size()), GL_UNSIGNED_INT, 0, 1);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -188,15 +242,12 @@ int main(void){
 
         if (mouseIsVisible && show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
-
         {
-
 
             ImGui::Begin("Solar System Menu");                          
 
             ImGui::Checkbox("Demo Window", &show_demo_window);    
             ImGui::Checkbox("Another Window", &show_another_window);
-            ImGui::Checkbox("Show sphere?", &show_sphere);
 
             ImGui::SliderFloat("x_rot", &x_rot, -1.0f, 1.0f);           
             ImGui::SliderFloat("y_rot", &y_rot, -1.0f, 1.0f);           
@@ -217,11 +268,10 @@ int main(void){
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &sphereVAO);
-    glDeleteBuffers(1, &sphereVBO);
-    glDeleteBuffers(1, &sphereEBO);
+    glDeleteVertexArrays(1, &planetsVAO);
+    glDeleteBuffers(1, &planetsVBO);
+    glDeleteBuffers(1, &planetsEBO);
 
-    sphere1 = NULL;
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
