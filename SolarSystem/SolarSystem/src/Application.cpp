@@ -34,15 +34,7 @@ std::vector<float> vertices;
 std::vector<unsigned int> indices;
 
 
-Sphere sphere1((float)69.6340, 36, 18, 0, indices, vertices); // SUN
-Sphere sphere2((float)0.24397, 36, 18, 1, indices, vertices); // MERCURY
-Sphere sphere3((float)0.60518, 36, 18, 2, indices, vertices); // VENUS
-Sphere sphere4((float)0.6371,  36, 18, 3, indices, vertices);  // EARTH
-Sphere sphere5((float)0.33895, 36, 18, 4, indices, vertices); // MARS
-Sphere sphere6((float)6.9911,  36, 18, 5, indices, vertices);  // JUPITER
-Sphere sphere7((float)5.8232,  36, 18, 6, indices, vertices);  // SATURN
-Sphere sphere8((float)2.5362,  36, 18, 7, indices, vertices);  // URANUS
-Sphere sphere9((float)2.4622,  36, 18, 8, indices, vertices);  // NEPTUNE
+Sphere sphere1((float)69.6340, 36, 18, 0, indices, vertices);
 
 void processInput(GLFWwindow* window);
 
@@ -51,6 +43,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+
+void generateModelMatrices(glm::mat4* planetsModelMatrices);
 
 int main(void){
 
@@ -141,49 +135,37 @@ int main(void){
 
 
     // translate every planet to its right starting coordinate (basically their distance from the Sun)
-    glm::mat4* planetsModelMatrices;
-    planetsModelMatrices = new glm::mat4[9];
+    glm::mat4* planetsModelMatrices = new glm::mat4[9];
 
-    planetsModelMatrices[0] = glm::translate(glm::mat4(1.0f), glm::vec3(3.5f, 0.0f, 0.0f));
-    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(6.7f, 0.0f, 0.0f));
-    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(9.3f, 0.0f, 0.0f));
-    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(14.2f, 0.0f, 0.0f));
-    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(29.7, 0.0f, 0.0f));
-    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(48.4f, 0.0f, 0.0f));
-    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(88.9f, 0.0f, 0.0f));
-    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(179.0f, 0.0f, 0.0f));
-    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(288.0f, 0.0f, 0.0f));
+    generateModelMatrices(planetsModelMatrices);
+    
 
     unsigned int planetsModelMatrixBuffer;
     glGenBuffers(1, &planetsModelMatrixBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
     glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
 
-    for (unsigned int i = 0; i < 9; i++) {
+    std::size_t vec4Size = sizeof(glm::vec4);
+    
 
-        glBindVertexArray(planetsVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+    glEnableVertexAttribArray(7);
+    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
 
-        std::size_t vec4Size = sizeof(glm::vec4);
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)0);
-        glEnableVertexAttribArray(4);
+    glVertexAttribDivisor(4, 1);
+    glVertexAttribDivisor(5, 1);
+    glVertexAttribDivisor(6, 1);
+    glVertexAttribDivisor(7, 1);
 
-        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(1 * vec4Size));
-        glEnableVertexAttribArray(5);
+    glBindVertexArray(0);
 
-        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size));
-        glEnableVertexAttribArray(6);
 
-        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size));
-        glEnableVertexAttribArray(7);
-
-        glVertexAttribDivisor(4, 1);
-        glVertexAttribDivisor(5, 1);
-        glVertexAttribDivisor(6, 1);
-        glVertexAttribDivisor(7, 1);
-
-        glBindVertexArray(0);
-
-    }
 
 
     bool show_demo_window = true;
@@ -218,6 +200,16 @@ int main(void){
 
         shader.use();
 
+        for (int i = 1; i < 9; i++) {
+
+            glm::vec3 pos(0.0f);
+            pos.x = (float)sin(glfwGetTime()) * 100.0f;
+            pos.z = (float)cos(glfwGetTime()) * 100.0f;
+
+            planetsModelMatrices[i] = glm::translate(planetsModelMatrices[i], pos);
+
+        }
+
         glm::mat4 view = camera.GetViewMatrix();
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 10000.0f);
@@ -233,8 +225,11 @@ int main(void){
 
         glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetsEBO);
+        glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
 
-        glDrawElementsInstanced(GL_TRIANGLES, unsigned int(indices.size()), GL_UNSIGNED_INT, 0, 1);
+        glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
+
+        glDrawElementsInstanced(GL_TRIANGLES, unsigned int(indices.size()), GL_UNSIGNED_INT, 0, 9);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -364,4 +359,34 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (!mouseIsVisible) {
         camera.ProcessMouseScroll(static_cast<float>(yoffset));
     }
+}
+
+void generateModelMatrices(glm::mat4* planetsModelMatrices) {
+
+    planetsModelMatrices[0] = glm::mat4(1.0f);
+
+    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(3.5 + 69.6340 + 0.24397 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[1] = glm::scale(planetsModelMatrices[1], glm::vec3(0.009503));
+
+    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(6.7 + 69.6340 + 0.60518 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[2] = glm::scale(planetsModelMatrices[2], glm::vec3(0.0146908));
+
+    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(9.3f + 69.6340 + 0.6371 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[3] = glm::scale(planetsModelMatrices[3], glm::vec3(0.0151492));
+
+    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(14.2f + 69.6340 + 0.33895 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[4] = glm::scale(planetsModelMatrices[4], glm::vec3(0.010867));
+
+    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(48.4f + 69.6340 + 6.9911f + 25, 0.0f, 0.0f));
+    planetsModelMatrices[5] = glm::scale(planetsModelMatrices[5], glm::vec3(0.103988));
+
+    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(88.9f + 69.6340 + 5.8232 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[6] = glm::scale(planetsModelMatrices[6], glm::vec3(0.08362581));
+
+    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(179.0f + 69.6340 + 2.5362 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[7] = glm::scale(planetsModelMatrices[7], glm::vec3(0.036421));
+
+    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(288.0f + 69.6340 + 2.4622 + 25, 0.0f, 0.0f));
+    planetsModelMatrices[8] = glm::scale(planetsModelMatrices[8], glm::vec3(0.035359));
+
 }
