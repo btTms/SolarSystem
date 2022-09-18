@@ -44,7 +44,10 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-void generateModelMatrices(glm::mat4* planetsModelMatrices);
+void scaleModelMatrices(glm::mat4* planetsModelMatrices);
+
+void computeRotation(glm::mat4* planetsModelMatrices);
+
 
 int main(void){
 
@@ -137,7 +140,10 @@ int main(void){
     // translate every planet to its right starting coordinate (basically their distance from the Sun)
     glm::mat4* planetsModelMatrices = new glm::mat4[9];
 
-    generateModelMatrices(planetsModelMatrices);
+    planetsModelMatrices[0] = glm::mat4(1.0f);
+    computeRotation(planetsModelMatrices);
+    
+    scaleModelMatrices(planetsModelMatrices);
     
 
     unsigned int planetsModelMatrixBuffer;
@@ -167,18 +173,6 @@ int main(void){
 
 
 
-
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    bool show_sphere = true;
-    glm::vec3 color(1.0f, 1.0f, 1.0f);
-
-    float x_rot = 0.0f;
-    float y_rot = 1.0f;
-    float z_rot = 0.0f;
-    float speed = 50.0f;
-
-
     while (!glfwWindowShouldClose(window))
     {
         // delta time:
@@ -200,15 +194,8 @@ int main(void){
 
         shader.use();
 
-        for (int i = 1; i < 9; i++) {
-
-            glm::vec3 pos(0.0f);
-            pos.x = (float)sin(glfwGetTime()) * 100.0f;
-            pos.z = (float)cos(glfwGetTime()) * 100.0f;
-
-            planetsModelMatrices[i] = glm::translate(planetsModelMatrices[i], pos);
-
-        }
+        computeRotation(planetsModelMatrices);
+        
 
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -235,21 +222,9 @@ int main(void){
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
 
-        if (mouseIsVisible && show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
         {
 
             ImGui::Begin("Solar System Menu");                          
-
-            ImGui::Checkbox("Demo Window", &show_demo_window);    
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("x_rot", &x_rot, -1.0f, 1.0f);           
-            ImGui::SliderFloat("y_rot", &y_rot, -1.0f, 1.0f);           
-            ImGui::SliderFloat("z_rot", &z_rot, -1.0f, 1.0f);           
-            ImGui::SliderFloat("speed", &speed, 50.0f, 200.0f);           
-            ImGui::ColorEdit3("clear color", (float*)&color); // Edit 3 floats representing a color
-
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
@@ -361,32 +336,50 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     }
 }
 
-void generateModelMatrices(glm::mat4* planetsModelMatrices) {
 
-    planetsModelMatrices[0] = glm::mat4(1.0f);
+void scaleModelMatrices(glm::mat4* planetsModelMatrices) {
 
-    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(3.5 + 69.6340 + 0.24397 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[1] = glm::scale(planetsModelMatrices[1], glm::vec3(0.009503));
+    planetsModelMatrices[1] = glm::scale(planetsModelMatrices[1], glm::vec3(0.009503f));
 
-    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(6.7 + 69.6340 + 0.60518 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[2] = glm::scale(planetsModelMatrices[2], glm::vec3(0.0146908));
+    planetsModelMatrices[2] = glm::scale(planetsModelMatrices[2], glm::vec3(0.0146908f));
 
-    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(9.3f + 69.6340 + 0.6371 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[3] = glm::scale(planetsModelMatrices[3], glm::vec3(0.0151492));
+    planetsModelMatrices[3] = glm::scale(planetsModelMatrices[3], glm::vec3(0.0151492f));
 
-    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(14.2f + 69.6340 + 0.33895 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[4] = glm::scale(planetsModelMatrices[4], glm::vec3(0.010867));
+    planetsModelMatrices[4] = glm::scale(planetsModelMatrices[4], glm::vec3(0.010867f));
 
-    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(48.4f + 69.6340 + 6.9911f + 25, 0.0f, 0.0f));
-    planetsModelMatrices[5] = glm::scale(planetsModelMatrices[5], glm::vec3(0.103988));
+    planetsModelMatrices[5] = glm::scale(planetsModelMatrices[5], glm::vec3(0.103988f));
 
-    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(88.9f + 69.6340 + 5.8232 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[6] = glm::scale(planetsModelMatrices[6], glm::vec3(0.08362581));
+    planetsModelMatrices[6] = glm::scale(planetsModelMatrices[6], glm::vec3(0.08362581f));
 
-    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(179.0f + 69.6340 + 2.5362 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[7] = glm::scale(planetsModelMatrices[7], glm::vec3(0.036421));
+    planetsModelMatrices[7] = glm::scale(planetsModelMatrices[7], glm::vec3(0.036421f));
 
-    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(288.0f + 69.6340 + 2.4622 + 25, 0.0f, 0.0f));
-    planetsModelMatrices[8] = glm::scale(planetsModelMatrices[8], glm::vec3(0.035359));
+    planetsModelMatrices[8] = glm::scale(planetsModelMatrices[8], glm::vec3(0.035359f));
+
+}
+
+void computeRotation(glm::mat4* planetsModelMatrices) {
+
+    glm::vec3 pos(0.0f);
+
+    pos.x = (float)sin(glfwGetTime());
+    pos.z = (float)cos(glfwGetTime());
+
+    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (3.5 + 69.6340 + 0.24397 + 25), 0.0f, pos.z * (3.5 + 69.6340 + 0.24397 + 25)));
+
+    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (6.7 + 69.6340 + 0.60518 + 25), 0.0f, pos.z * (6.7 + 69.6340 + 0.60518 + 25)));
+
+    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (9.3f + 69.6340 + 0.6371 + 25), 0.0f, pos.z * (9.3f + 69.6340 + 0.6371 + 25)));
+
+    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (14.2f + 69.6340 + 0.33895 + 25), 0.0f, pos.z * (14.2f + 69.6340 + 0.33895 + 25)));
+
+    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (48.4f + 69.6340 + 6.9911f + 25), 0.0f, pos.z * (48.4f + 69.6340 + 6.9911f + 25)));
+
+    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (88.9f + 69.6340 + 5.8232 + 25), 0.0f, pos.z * (88.9f + 69.6340 + 5.8232 + 25)));
+
+    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (179.0f + 69.6340 + 2.5362 + 25), 0.0f, pos.z * (179.0f + 69.6340 + 2.5362 + 25)));
+
+    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (288.0f + 69.6340 + 2.4622 + 25), 0.0f, pos.z * (288.0f + 69.6340 + 2.4622 + 25)));
+
+    scaleModelMatrices(planetsModelMatrices);
 
 }
