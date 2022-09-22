@@ -1,8 +1,5 @@
 #include "Sphere.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 
 const int MIN_SECTOR_COUNT = 3;
 const int MIN_STACK_COUNT = 2;
@@ -243,7 +240,7 @@ glm::vec3 Sphere::computeFaceNormal(float x1, float y1, float z1,  // v1
 
 
 // Load texture:
-unsigned int Sphere::loadTexture(const char* path, bool wrap) {
+/*unsigned int Sphere::loadTexture(const char* path, bool wrap) {
 
 	unsigned int texture;
 	glGenTextures(1, &texture);
@@ -279,4 +276,4 @@ unsigned int Sphere::loadTexture(const char* path, bool wrap) {
 
 	return texture;
 	
-}
+}*/

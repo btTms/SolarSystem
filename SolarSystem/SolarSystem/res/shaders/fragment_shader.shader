@@ -2,7 +2,12 @@
 
 out vec4 FragColor;
 
+in float ind;
+in vec2 TexCoord;
+
+uniform sampler2D planetTexture[9];
+
 void main() {
 
-	FragColor = vec4(0.2f, 1.0f, 0.5f, 1.0f);
+	FragColor = texture(planetTexture[uint(ind)], TexCoord);
 }

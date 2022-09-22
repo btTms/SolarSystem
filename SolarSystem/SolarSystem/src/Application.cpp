@@ -5,6 +5,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <iostream>
 #include <vector>
 
@@ -32,6 +35,20 @@ bool mouseIsVisible = false;
 
 std::vector<float> vertices;
 std::vector<unsigned int> indices;
+std::vector<unsigned int> textures(9, 0);
+
+std::vector<std::string> texture_paths = {
+    "res/textures/sun.jpg",
+    "res/textures/mercury.jpg",
+    "res/textures/venus_surface.jpg",
+    "res/textures/earth_daymap.jpg",
+    "res/textures/mars.jpg",
+    "res/textures/jupiter.jpg",
+    "res/textures/saturn.jpg",
+    "res/textures/uranus.jpg",
+    "res/textures/neptune.jpg",
+
+};
 
 
 Sphere sphere1((float)69.6340, 36, 18, 0, indices, vertices);
@@ -47,6 +64,12 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void scaleModelMatrices(glm::mat4* planetsModelMatrices);
 
 void computeRotation(glm::mat4* planetsModelMatrices);
+
+void loadTextures(std::vector<unsigned int>& textures, std::vector<std::string> texture_paths);
+
+void setupSamplers(Shader shader);
+
+void activateTextures(std::vector<unsigned int> textures);
 
 
 int main(void){
@@ -101,11 +124,15 @@ int main(void){
 
     Shader shader("res/shaders/vertex_shader.shader", "res/shaders/fragment_shader.shader");
 
+    loadTextures(textures, texture_paths);
+    setupSamplers(shader);
 
     int stride = 32;
 
     unsigned int planetsVAO;
     glGenVertexArrays(1, &planetsVAO);
+
+    glBindVertexArray(planetsVAO);
 
     // Vertex buffer of the planets:
     unsigned int planetsVBO;
@@ -113,8 +140,7 @@ int main(void){
 
     glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
     glBufferData(GL_ARRAY_BUFFER, (unsigned int)vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(planetsVAO);
+    
 
     // position attributes:
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
@@ -142,7 +168,6 @@ int main(void){
 
     planetsModelMatrices[0] = glm::mat4(1.0f);
     computeRotation(planetsModelMatrices);
-    
     scaleModelMatrices(planetsModelMatrices);
     
 
@@ -150,11 +175,8 @@ int main(void){
     glGenBuffers(1, &planetsModelMatrixBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
     glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
-
-    std::size_t vec4Size = sizeof(glm::vec4);
     
 
-    glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
     glEnableVertexAttribArray(5);
@@ -168,6 +190,29 @@ int main(void){
     glVertexAttribDivisor(5, 1);
     glVertexAttribDivisor(6, 1);
     glVertexAttribDivisor(7, 1);
+
+    std::vector<float> samplerIDs = {
+        0.0, 
+        1.0, 
+        2.0, 
+        3.0, 
+        4.0, 
+        5.0, 
+        6.0, 
+        7.0, 
+        8.0
+    };
+
+    unsigned int samplerIDBuffer;
+    glGenBuffers(1, &samplerIDBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, samplerIDBuffer);
+    glBufferData(GL_ARRAY_BUFFER, (unsigned int)samplerIDs.size() * sizeof(float), samplerIDs.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(8);
+    glVertexAttribPointer(8, 1, GL_FLOAT, GL_FALSE, 1 * sizeof(float), (void*)0);
+
+    glVertexAttribDivisor(8, 0);
+
 
     glBindVertexArray(0);
 
@@ -195,7 +240,7 @@ int main(void){
         shader.use();
 
         computeRotation(planetsModelMatrices);
-        
+        activateTextures(textures);
 
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -213,6 +258,7 @@ int main(void){
         glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetsEBO);
         glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, samplerIDBuffer);
 
         glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
 
@@ -238,17 +284,16 @@ int main(void){
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &planetsVAO);
-    glDeleteBuffers(1, &planetsVBO);
-    glDeleteBuffers(1, &planetsEBO);
+    glDeleteVertexArrays(1, &planetsVAO);                                   
+    glDeleteBuffers(1, &planetsVBO);                     
+    glDeleteBuffers(1, &planetsEBO);                                   
 
 
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
-
+    // Cleanup                   
+    ImGui_ImplOpenGL3_Shutdown();                                                               
+    ImGui_ImplGlfw_Shutdown();                                                                                                                       
+    ImGui::DestroyContext();                             
+                     
     glfwTerminate();
     return 0;
 }
@@ -364,22 +409,70 @@ void computeRotation(glm::mat4* planetsModelMatrices) {
     pos.x = (float)sin(glfwGetTime());
     pos.z = (float)cos(glfwGetTime());
 
-    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (3.5 + 69.6340 + 0.24397 + 25), 0.0f, pos.z * (3.5 + 69.6340 + 0.24397 + 25)));
+    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (3.5 + 69.6340 + 0.24397 + 25),   0.0f, pos.z * (3.5 + 69.6340 + 0.24397 + 25)));
 
-    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (6.7 + 69.6340 + 0.60518 + 25), 0.0f, pos.z * (6.7 + 69.6340 + 0.60518 + 25)));
+    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (6.7 + 69.6340 + 0.60518 + 25),   0.0f, pos.z * (6.7 + 69.6340 + 0.60518 + 25)));
 
-    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (9.3f + 69.6340 + 0.6371 + 25), 0.0f, pos.z * (9.3f + 69.6340 + 0.6371 + 25)));
+    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (9.3f + 69.6340 + 0.6371 + 25),   0.0f, pos.z * (9.3f + 69.6340 + 0.6371 + 25)));
 
     planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (14.2f + 69.6340 + 0.33895 + 25), 0.0f, pos.z * (14.2f + 69.6340 + 0.33895 + 25)));
 
     planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (48.4f + 69.6340 + 6.9911f + 25), 0.0f, pos.z * (48.4f + 69.6340 + 6.9911f + 25)));
 
-    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (88.9f + 69.6340 + 5.8232 + 25), 0.0f, pos.z * (88.9f + 69.6340 + 5.8232 + 25)));
+    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (88.9f + 69.6340 + 5.8232 + 25),  0.0f, pos.z * (88.9f + 69.6340 + 5.8232 + 25)));
 
     planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (179.0f + 69.6340 + 2.5362 + 25), 0.0f, pos.z * (179.0f + 69.6340 + 2.5362 + 25)));
 
     planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x * (288.0f + 69.6340 + 2.4622 + 25), 0.0f, pos.z * (288.0f + 69.6340 + 2.4622 + 25)));
 
     scaleModelMatrices(planetsModelMatrices);
+
+}
+
+void loadTextures(std::vector<unsigned int>& textures, std::vector<std::string> texture_paths) {
+
+    glGenTextures(9, &textures[0]);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+    for (int i = 0; i < 9; i++) {
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load(texture_paths[i].c_str(), &width, &height, &nrChannels, 0);
+
+        if (data) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else {
+            std::cout << "Failed to load " << texture_paths[i] << " texture \n";
+        }
+        stbi_image_free(data);
+    }
+
+}
+
+void setupSamplers(Shader shader) {
+
+    for (int i = 0; i < 9; i++) {
+
+        std::string s = "planetTexture[" + std::to_string(i) + "]";
+        glUniform1i(glGetUniformLocation(shader.ID, s.c_str()), i);
+    }
+
+}
+
+void activateTextures(std::vector<unsigned int> textures) {
+
+    for (int i = 0; i < 9; i++) {
+
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, textures[i]);
+
+    }
 
 }
