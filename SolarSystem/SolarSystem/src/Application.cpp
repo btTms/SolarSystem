@@ -41,7 +41,9 @@ std::vector<std::string> texture_paths = {
     "res/textures/sun.jpg",
     "res/textures/mercury.jpg",
     "res/textures/venus_surface.jpg",
+    "res/textures/venus_atmosphere.jpg",
     "res/textures/earth_daymap.jpg",
+    "res/textures/earth_clouds.jpg",
     "res/textures/mars.jpg",
     "res/textures/jupiter.jpg",
     "res/textures/saturn.jpg",
@@ -65,11 +67,39 @@ void scaleModelMatrices(glm::mat4* planetsModelMatrices);
 
 void computeRotation(glm::mat4* planetsModelMatrices);
 
-void loadTextures(std::vector<unsigned int>& textures, std::vector<std::string> texture_paths);
+void initializeTextureArray(unsigned int& textureArray);
 
-void setupSamplers(Shader shader);
+void addTextureToTextureArrays(std::vector<std::string> texture_paths, unsigned int& textureArray);
 
-void activateTextures(std::vector<unsigned int> textures);
+void generateTextureArraysMipMaps(unsigned int& textureArray);
+
+void allignPlanets(glm::mat4* planetsModelMatrices);
+
+
+#define ASSERT(x) if (!(x)) __debugbreak();
+
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT(GLLogCall())
+
+static void GLClearError() {
+
+    while (glGetError() != GL_NO_ERROR);
+
+}
+
+static bool GLLogCall() {
+
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL Error] ( " << error << " )\n";
+
+        return false;
+    }
+
+    return true;
+
+}
+
 
 
 int main(void){
@@ -124,8 +154,8 @@ int main(void){
 
     Shader shader("res/shaders/vertex_shader.shader", "res/shaders/fragment_shader.shader");
 
-    loadTextures(textures, texture_paths);
-    setupSamplers(shader);
+    shader.use();
+
 
     int stride = 32;
 
@@ -167,8 +197,9 @@ int main(void){
     glm::mat4* planetsModelMatrices = new glm::mat4[9];
 
     planetsModelMatrices[0] = glm::mat4(1.0f);
-    computeRotation(planetsModelMatrices);
-    scaleModelMatrices(planetsModelMatrices);
+    //computeRotation(planetsModelMatrices);
+
+    allignPlanets(planetsModelMatrices);
     
 
     unsigned int planetsModelMatrixBuffer;
@@ -191,31 +222,17 @@ int main(void){
     glVertexAttribDivisor(6, 1);
     glVertexAttribDivisor(7, 1);
 
-    std::vector<float> samplerIDs = {
-        0.0, 
-        1.0, 
-        2.0, 
-        3.0, 
-        4.0, 
-        5.0, 
-        6.0, 
-        7.0, 
-        8.0
-    };
-
-    unsigned int samplerIDBuffer;
-    glGenBuffers(1, &samplerIDBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, samplerIDBuffer);
-    glBufferData(GL_ARRAY_BUFFER, (unsigned int)samplerIDs.size() * sizeof(float), samplerIDs.data(), GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(8);
-    glVertexAttribPointer(8, 1, GL_FLOAT, GL_FALSE, 1 * sizeof(float), (void*)0);
-
-    glVertexAttribDivisor(8, 0);
-
 
     glBindVertexArray(0);
 
+
+    unsigned int textureArray;
+
+    initializeTextureArray(textureArray);
+
+    addTextureToTextureArrays(texture_paths, textureArray);
+
+    generateTextureArraysMipMaps(textureArray);
 
 
     while (!glfwWindowShouldClose(window))
@@ -239,8 +256,12 @@ int main(void){
 
         shader.use();
 
-        computeRotation(planetsModelMatrices);
-        activateTextures(textures);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+
+        glUniform1i(glGetUniformLocation(shader.ID, "planetTexture"), 0);
+
+        //computeRotation(planetsModelMatrices);
 
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -258,9 +279,8 @@ int main(void){
         glBindBuffer(GL_ARRAY_BUFFER, planetsVBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetsEBO);
         glBindBuffer(GL_ARRAY_BUFFER, planetsModelMatrixBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, samplerIDBuffer);
 
-        glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
+        //glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(glm::mat4), &planetsModelMatrices[0], GL_STATIC_DRAW);
 
         glDrawElementsInstanced(GL_TRIANGLES, unsigned int(indices.size()), GL_UNSIGNED_INT, 0, 9);
 
@@ -429,50 +449,87 @@ void computeRotation(glm::mat4* planetsModelMatrices) {
 
 }
 
-void loadTextures(std::vector<unsigned int>& textures, std::vector<std::string> texture_paths) {
+void allignPlanets(glm::mat4* planetsModelMatrices) {
 
-    glGenTextures(9, &textures[0]);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    planetsModelMatrices[1] = glm::translate(glm::mat4(1.0f), glm::vec3((3.5 + 69.6340 + 0.24397 + 25), 0.0f, (3.5 + 69.6340 + 0.24397 + 25)));
 
-    for (int i = 0; i < 9; i++) {
+    planetsModelMatrices[2] = glm::translate(glm::mat4(1.0f), glm::vec3((6.7 + 69.6340 + 0.60518 + 25), 0.0f, (6.7 + 69.6340 + 0.60518 + 25)));
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    planetsModelMatrices[3] = glm::translate(glm::mat4(1.0f), glm::vec3((9.3f + 69.6340 + 0.6371 + 25), 0.0f, (9.3f + 69.6340 + 0.6371 + 25)));
 
-        int width, height, nrChannels;
+    planetsModelMatrices[4] = glm::translate(glm::mat4(1.0f), glm::vec3((14.2f + 69.6340 + 0.33895 + 25), 0.0f, (14.2f + 69.6340 + 0.33895 + 25)));
+
+    planetsModelMatrices[5] = glm::translate(glm::mat4(1.0f), glm::vec3((48.4f + 69.6340 + 6.9911f + 25), 0.0f, (48.4f + 69.6340 + 6.9911f + 25)));
+
+    planetsModelMatrices[6] = glm::translate(glm::mat4(1.0f), glm::vec3((88.9f + 69.6340 + 5.8232 + 25), 0.0f, (88.9f + 69.6340 + 5.8232 + 25)));
+
+    planetsModelMatrices[7] = glm::translate(glm::mat4(1.0f), glm::vec3((179.0f + 69.6340 + 2.5362 + 25), 0.0f, (179.0f + 69.6340 + 2.5362 + 25)));
+
+    planetsModelMatrices[8] = glm::translate(glm::mat4(1.0f), glm::vec3((288.0f + 69.6340 + 2.4622 + 25), 0.0f, (288.0f + 69.6340 + 2.4622 + 25)));
+
+    scaleModelMatrices(planetsModelMatrices);
+
+}
+
+
+
+void initializeTextureArray(unsigned int& textureArray) {
+
+    std::cout << "Initializing texture array\n";
+
+
+    GLCall(glGenTextures(1, &textureArray));
+    GLCall(glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray));
+
+    GLCall(glTexStorage3D(GL_TEXTURE_2D_ARRAY, 11, GL_RGB8, 2048, 1024, 12));
+
+    GLCall(glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GLCall(glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GLCall(glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    std::cout << "Done initializing texture array\n";
+}
+
+void addTextureToTextureArrays(std::vector<std::string> texture_paths, unsigned int& textureArray) {
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+
+    for (unsigned int i = 0; i <= 10; i++) {
+
+        unsigned int texture;
+
+        GLCall(glGenTextures(1, &texture));
+
+        glBindTexture(GL_TEXTURE_3D, texture); 
+
+        int width = 0, height = 0, nrChannels = 0;
+
+        GLCall(stbi_set_flip_vertically_on_load(true));
         unsigned char* data = stbi_load(texture_paths[i].c_str(), &width, &height, &nrChannels, 0);
 
-        if (data) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
+        std::cout << "width " << width << "height " << height << "\n";
+
+        if (data){
+            GLCall(glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, data));
         }
-        else {
-            std::cout << "Failed to load " << texture_paths[i] << " texture \n";
+        else{
+            std::cout << "Failed to load " << texture_paths[i] << "\n";
         }
+
         stbi_image_free(data);
+       
     }
 
 }
 
-void setupSamplers(Shader shader) {
+void generateTextureArraysMipMaps(unsigned int& textureArray) {
 
-    for (int i = 0; i < 9; i++) {
+    GLCall(glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray));
+    GLCall(glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
 
-        std::string s = "planetTexture[" + std::to_string(i) + "]";
-        glUniform1i(glGetUniformLocation(shader.ID, s.c_str()), i);
-    }
-
-}
-
-void activateTextures(std::vector<unsigned int> textures) {
-
-    for (int i = 0; i < 9; i++) {
-
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, textures[i]);
-
-    }
+    GLCall(glGenerateMipmap(GL_TEXTURE_2D_ARRAY));
 
 }
+
+
